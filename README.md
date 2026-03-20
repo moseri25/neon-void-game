@@ -1,14 +1,15 @@
 # 🕹️ Neon Void – Area Enclosure Arcade Game
 
-A cyberpunk-themed **Volfied-style** area enclosure arcade game built with **Next.js 15**, **React 19**, and a custom 2D game engine.
+A cyberpunk-themed **Volfied-style** area enclosure arcade game built with **Next.js 16**, **React 19**, and a custom 2D game engine.
 
 ![Neon Void](https://img.shields.io/badge/Game-Neon%20Void-blueviolet?style=for-the-badge)
-![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)
+![Deployed](https://img.shields.io/badge/Deployed-Vercel-000000?style=for-the-badge&logo=vercel)
 
 ## 🎮 Play Now
 
-🔗 **[Play Neon Void Live](https://neon-void-game.vercel.app)**
+🔗 **[Play Neon Void Live](https://neon-void-one.vercel.app)**
 
 ## 📖 About
 
@@ -66,13 +67,14 @@ npm start
 
 ## 🏗️ Tech Stack
 
-- **Framework**: Next.js 15 with Turbopack
+- **Framework**: Next.js 16 with Turbopack
 - **UI**: React 19 + Zustand + Framer Motion
 - **Styling**: TailwindCSS 3.4
 - **Engine**: Custom ECS (Entity-Component-System) architecture
 - **Physics**: Custom 2D physics with spatial hash grid
 - **Rendering**: Canvas 2D with WebGPU-ready renderer
 - **Audio**: Web Audio API spatial audio system
+- **Deployment**: Vercel (CDN + Edge)
 
 ## 📁 Project Structure
 
