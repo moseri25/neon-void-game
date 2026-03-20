@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neon-void
+  labels:
+    app.kubernetes.io/part-of: neon-void
+    app.kubernetes.io/managed-by: kubectl

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package neonvoid;
+
+option go_package = "github.com/neon-void/backend/proto";
+
+message CaptureEvent {
+  string player_id = 1;
+  float area_captured_percentage = 2;
+  int32 combo_multiplier = 3;
+  int64 timestamp = 4;
+}
+
+message LevelState {
+  int32 current_level = 1;
+  float total_cleared = 2;
+  repeated EnemyState entities = 3;
+}
+
+message EnemyState {
+  string id = 1;
+  float x = 2;
+  float y = 3;
+  float vx = 4;
+  float vy = 5;
+  string type = 6;
+}
+
+message PlayerState {
+  string id = 1;
+  float x = 2;
+  float y = 3;
+  int32 lives = 4;
+  int64 score = 5;
+  bool is_drawing = 6;
+}
+
+message GhostFrame {
+  string player_id = 1;
+  float x = 2;
+  float y = 3;
+  int64 timestamp = 4;
+}
+
+message WebSocketMessage {
+  string channel = 1;
+  bytes data = 2;
+  int64 timestamp = 3;
+}

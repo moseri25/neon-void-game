@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --void-black: #05050A;
+  --cyan-plasma: #00F0FF;
+  --magenta-overdrive: #FF003C;
+  --warning-amber: #FFB800;
+  --void-gray: #1A1A2E;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  background-color: var(--void-black);
+  color: var(--cyan-plasma);
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(0, 240, 255, 0.3);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cyan-plasma);
+  border-radius: 3px;
+}
+
+@layer utilities {
+  .text-glow-cyan {
+    text-shadow: 0 0 8px rgba(0, 240, 255, 0.6), 0 0 20px rgba(0, 240, 255, 0.3);
+  }
+  .text-glow-magenta {
+    text-shadow: 0 0 8px rgba(255, 0, 60, 0.6), 0 0 20px rgba(255, 0, 60, 0.3);
+  }
+  .text-glow-amber {
+    text-shadow: 0 0 8px rgba(255, 184, 0, 0.6), 0 0 20px rgba(255, 184, 0, 0.3);
+  }
+  .neon-border-cyan {
+    border: 1px solid var(--cyan-plasma);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2), inset 0 0 10px rgba(0, 240, 255, 0.05);
+  }
+  .neon-border-magenta {
+    border: 1px solid var(--magenta-overdrive);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.2), inset 0 0 10px rgba(255, 0, 60, 0.05);
+  }
+  .glass {
+    background: rgba(26, 26, 46, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .chromatic-aberration {
+    text-shadow:
+      -2px 0 rgba(0, 240, 255, 0.7),
+      2px 0 rgba(255, 0, 60, 0.7);
+  }
+}
+
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-scroll 20s linear infinite;
+}
+
+.scanline-overlay::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 240, 255, 0.015) 2px,
+    rgba(0, 240, 255, 0.015) 4px
+  );
+  z-index: 9999;
+}
+
+@keyframes grid-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 50px 50px; }
+}
+
+/* Colorblindness Filters */
+.colorblind-deuteranopia {
+  filter: url('#deuteranopia') !important;
+}
+.colorblind-protanopia {
+  filter: url('#protanopia') !important;
+}
+.colorblind-tritanopia {
+  filter: url('#tritanopia') !important;
+}

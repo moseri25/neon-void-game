@@ -1,0 +1,41 @@
+###############################################################################
+# Project Neon Void - Backend Dockerfile (Go)
+# Multi-stage build with distroless for minimal attack surface
+###############################################################################
+
+# Stage 1: Build the Go binary
+FROM golang:1.23-alpine AS builder
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /app
+
+COPY go.mod ./
+RUN go mod download && go mod verify
+
+COPY . .
+
+ARG SERVICE_NAME=api
+ARG VERSION=dev
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -X main.version=${VERSION}" \
+    -trimpath \
+    -o /app/server \
+    ./cmd/${SERVICE_NAME}
+
+# Stage 2: Minimal production image
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/server /server
+
+ARG PORT=8080
+ENV PORT=${PORT}
+
+USER nonroot:nonroot
+
+EXPOSE ${PORT}
+
+ENTRYPOINT ["/server"]

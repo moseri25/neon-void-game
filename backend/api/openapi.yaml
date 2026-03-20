@@ -1,0 +1,186 @@
+openapi: "3.0.3"
+info:
+  title: Neon Void API
+  version: "0.1.0"
+  description: Backend API for Neon Void area capture game
+
+servers:
+  - url: http://localhost:8081
+    description: Auth service
+  - url: http://localhost:8082
+    description: Game API service
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Register new user
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Username taken
+
+  /api/auth/login:
+    post:
+      summary: Login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /api/auth/verify:
+    get:
+      summary: Verify JWT token
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+
+  /api/leaderboard:
+    get:
+      summary: Get global leaderboard
+      tags: [Leaderboard]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+
+  /api/scores:
+    post:
+      summary: Submit a score
+      tags: [Leaderboard]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitScoreRequest'
+      responses:
+        '200':
+          description: Score submitted
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        password:
+          type: string
+          minLength: 8
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user_id:
+          type: string
+        username:
+          type: string
+
+    UserInfo:
+      type: object
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+
+    ScoreEntry:
+      type: object
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        score:
+          type: number
+        rank:
+          type: integer
+
+    LeaderboardResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreEntry'
+        total:
+          type: integer
+
+    SubmitScoreRequest:
+      type: object
+      required: [score]
+      properties:
+        score:
+          type: number
+        levels_completed:
+          type: integer
+        capture_percent:
+          type: number
+        duration_ms:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <filter id="bossGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Legs Group -->
+  <g stroke="#00FFCC" stroke-width="4" fill="none" filter="url(#bossGlow)">
+    <!-- Legs (left) -->
+    <path d="M80,85 Q40,40 10,70" />
+    <path d="M80,95 Q30,75 20,110" />
+    <path d="M85,105 Q35,110 30,150" />
+    <path d="M90,115 Q45,140 50,180" />
+    <!-- Legs (right) -->
+    <path d="M120,85 Q160,40 190,70" />
+    <path d="M120,95 Q170,75 180,110" />
+    <path d="M115,105 Q165,110 170,150" />
+    <path d="M110,115 Q155,140 150,180" />
+  </g>
+  <!-- Body/Head Group -->
+  <ellipse cx="100" cy="120" rx="30" ry="40" fill="none" stroke="#FF00FF" stroke-width="4" filter="url(#bossGlow)"/>
+  <path d="M85,120 Q100,100 115,120 Q100,140 85,120" fill="#FF00FF" opacity="0.4" />
+  <circle cx="100" cy="80" r="20" fill="none" stroke="#FF00FF" stroke-width="4" filter="url(#bossGlow)"/>
+  <!-- Eyes -->
+  <g fill="#00FF00" filter="url(#bossGlow)">
+    <circle cx="95" cy="75" r="3" />
+    <circle cx="105" cy="75" r="3" />
+    <circle cx="90" cy="82" r="2" />
+    <circle cx="110" cy="82" r="2" />
+  </g>
+  <!-- Mandibles -->
+  <path d="M90,65 Q85,55 95,50" fill="none" stroke="#FFD700" stroke-width="3" filter="url(#bossGlow)"/>
+  <path d="M110,65 Q115,55 105,50" fill="none" stroke="#FFD700" stroke-width="3" filter="url(#bossGlow)"/>
+</svg>

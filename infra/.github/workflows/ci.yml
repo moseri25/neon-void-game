@@ -1,0 +1,259 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: neon-void-staging
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint-and-test-frontend:
+    name: Lint & Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npm test -- --ci --coverage --maxWorkers=2
+
+      - name: Upload coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 7
+
+  lint-and-test-backend:
+    name: Lint & Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: backend/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend
+
+      - name: Run tests
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+          retention-days: 7
+
+  build-frontend:
+    name: Build Frontend
+    needs: lint-and-test-frontend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_REGISTRY }}/neon-void/frontend
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./infra/docker/Dockerfile.frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-backend:
+    name: Build Backend Services
+    needs: lint-and-test-backend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        service:
+          - name: auth-service
+            port: "8081"
+          - name: game-service
+            port: "8082"
+          - name: ws-service
+            port: "8080"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_REGISTRY }}/neon-void/${{ matrix.service.name }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./infra/docker/Dockerfile.backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SERVICE_NAME=${{ matrix.service.name }}
+            PORT=${{ matrix.service.port }}
+            VERSION=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.name }}
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Set image tags
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "IMAGE_TAG=${SHORT_SHA}" >> $GITHUB_ENV
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f infra/k8s/namespace.yaml
+          kubectl apply -f infra/k8s/secrets.yaml
+          kubectl apply -f infra/k8s/services.yaml
+          kubectl apply -f infra/k8s/ingress.yaml
+          kubectl apply -f infra/k8s/hpa.yaml
+
+      - name: Update deployment images
+        run: |
+          kubectl set image deployment/auth-service \
+            auth-service=${{ secrets.DOCKER_REGISTRY }}/neon-void/auth-service:${{ env.IMAGE_TAG }} \
+            -n neon-void
+          kubectl set image deployment/game-service \
+            game-service=${{ secrets.DOCKER_REGISTRY }}/neon-void/game-service:${{ env.IMAGE_TAG }} \
+            -n neon-void
+          kubectl set image deployment/ws-service \
+            ws-service=${{ secrets.DOCKER_REGISTRY }}/neon-void/ws-service:${{ env.IMAGE_TAG }} \
+            -n neon-void
+          kubectl set image deployment/frontend \
+            frontend=${{ secrets.DOCKER_REGISTRY }}/neon-void/frontend:${{ env.IMAGE_TAG }} \
+            -n neon-void
+
+      - name: Apply deployments
+        run: |
+          kubectl apply -f infra/k8s/deployment-auth.yaml
+          kubectl apply -f infra/k8s/deployment-game.yaml
+          kubectl apply -f infra/k8s/deployment-ws.yaml
+          kubectl apply -f infra/k8s/deployment-frontend.yaml
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/auth-service -n neon-void --timeout=300s
+          kubectl rollout status deployment/game-service -n neon-void --timeout=300s
+          kubectl rollout status deployment/ws-service -n neon-void --timeout=300s
+          kubectl rollout status deployment/frontend -n neon-void --timeout=300s
+
+      - name: Verify deployment health
+        run: |
+          echo "=== Pod Status ==="
+          kubectl get pods -n neon-void
+          echo "=== Service Status ==="
+          kubectl get svc -n neon-void
+          echo "=== Ingress Status ==="
+          kubectl get ingress -n neon-void
